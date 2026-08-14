@@ -36,7 +36,7 @@ const questions = [
     },
     {
         era: "江戸〜幕末",
-        theme: "外圧と倒幕のピタゴラスイッチ",
+        theme: "外圧と倒幕の流れ",
         hint: "「外からの圧力」が幕府をどう追い詰めたか！",
 
         image: "images/Taisei_Hokan.jpg",
