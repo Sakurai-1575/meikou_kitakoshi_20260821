@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>北辰イベント 2026年8月22日 社会</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<style>
+  :root {
+    --meiko-blue: #005BAC;
+    --meiko-blue-dark: #003F88;
+    --meiko-yellow: #FACC15;
+    --meiko-yellow-dark: #EAB308;
+    --base: #F8FAFC;
+    --warm-base: #FFFBEA;
+    --text: #1E293B;
+    --sub-text: #64748B;
+    --success: #22C55E;
+    --error: #EF4444;
+    --white: #FFFFFF;
+  }
+  html, body {
+    overscroll-behavior: none;
+    background:
+      radial-gradient(1200px 400px at 10% -10%, rgba(0,91,172,0.06), transparent),
+      radial-gradient(1200px 400px at 100% 0%, rgba(250,204,21,0.10), transparent),
+      var(--base);
+    color: var(--text);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+    font-size: 18px;
+  }
+  * { box-sizing: border-box; }
+  button, input, .card {
+    touch-action: manipulation;
+  }
+  .no-select { user-select: none; -webkit-user-select: none; }
+  .btn-press { transition: transform .12s ease, box-shadow .12s ease, filter .12s ease; }
+  .btn-press:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.15) !important; }
+  .card-shadow { box-shadow: 0 10px 24px -8px rgba(0,63,136,0.14), 0 2px 6px -2px rgba(0,63,136,0.06); }
+  .btn-shadow-yellow { box-shadow: 0 6px 0 var(--meiko-yellow-dark); }
+  .btn-shadow-blue { box-shadow: 0 6px 0 var(--meiko-blue-dark); }
+  .screen { display: none; }
+  .screen.active { display: flex; animation: fadeIn .35s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ===== 出来事カード ===== */
+  .event-card {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    cursor: grab;
+    position: relative;
+    border: 1.5px solid #DCE7F5;
+    border-left: 6px solid var(--meiko-blue);
+    transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease;
+  }
+  .event-card:active { cursor: grabbing; }
+  .event-card:hover { box-shadow: 0 14px 28px -8px rgba(0,63,136,0.20); }
+  .sortable-ghost {
+    opacity: 1 !important;
+    background: #EAF2FB !important;
+    border: 1.5px dashed var(--meiko-blue) !important;
+    border-left: 6px solid var(--meiko-blue) !important;
+  }
+  .sortable-ghost * { opacity: 0; }
+  .sortable-chosen {
+    box-shadow: 0 16px 32px -8px rgba(0,63,136,0.28) !important;
+    border-color: var(--meiko-blue) !important;
+    outline: 2px solid rgba(250,204,21,0.55);
+    outline-offset: 2px;
+  }
+  .sortable-drag {
+    transform: scale(1.03);
+    box-shadow: 0 20px 40px -8px rgba(0,63,136,0.35) !important;
+  }
+
+  .order-badge {
+    background: var(--meiko-blue);
+  }
+
+  .overlay-bg { background: rgba(0,26,54,0.55); backdrop-filter: blur(4px); }
+  .overlay-card { animation: popIn .3s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes popIn { from { opacity:0; transform: scale(.94) translateY(10px);} to {opacity:1; transform: scale(1) translateY(0);} }
+  .hint-body { max-height: 0; overflow: hidden; transition: max-height .38s ease, opacity .3s ease, padding .38s ease; opacity: 0; }
+  .hint-body.open { max-height: 400px; opacity: 1; }
+  .progress-fill { transition: width .4s ease; }
+  ::-webkit-scrollbar { width: 8px; }
+
+  .team-chip {
+    transition: all .15s ease;
+    background: var(--white);
+    border: 1.5px solid var(--meiko-blue);
+    color: var(--meiko-blue-dark);
+  }
+  .team-chip.selected {
+    background: var(--meiko-blue);
+    color: var(--white);
+    border-color: var(--meiko-blue);
+    box-shadow: 0 0 0 3px rgba(250,204,21,0.45);
+  }
+
+  .flow-connector { display: flex; justify-content: center; }
+
+  .judge-bar {
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .era-badge {
+    background: var(--meiko-blue);
+    color: var(--white);
+  }
+
+  .hint-toggle-btn {
+    background: var(--white);
+    border: 1.5px solid #DCE7F5;
+    border-left: 5px solid var(--meiko-blue);
+    color: var(--meiko-blue-dark);
+  }
+  .hint-body-inner {
+    background: var(--warm-base);
+    border: 1.5px solid #FDE68A;
+  }
+</style>
+</head>
+<body class="no-select">
+
+<!-- ============ 画面1: スタート画面 ============ -->
+<section id="screen-start" class="screen min-h-screen w-full flex-col items-center justify-center p-6 active">
+  <div class="w-full max-w-3xl bg-white rounded-[28px] card-shadow p-8 md:p-12 flex flex-col items-center gap-7" style="border-top: 6px solid var(--meiko-blue); border-bottom: 6px solid var(--meiko-yellow);">
+    <div class="text-center">
+      <p class="text-sm md:text-base font-bold tracking-wide" style="color: var(--meiko-blue-dark);">明光義塾 北越谷教室</p>
+      <h1 class="text-2xl md:text-4xl font-extrabold mt-2" style="color: var(--text);">北辰イベント 2026年8月22日 社会</h1>
+      <p class="mt-3 text-base md:text-lg font-bold" style="color: var(--meiko-blue);">歴史因果関係 並び替えワーク</p>
+    </div>
+
+    <div class="w-full mt-1">
+      <label for="team-input" class="block font-bold mb-2 text-lg">チーム名</label>
+      <input id="team-input" type="text" placeholder="例：チーム3" aria-label="チーム名を入力"
+        class="w-full text-lg md:text-xl px-5 py-4 rounded-[18px] border-2 focus:outline-none transition-colors"
+        style="min-height:64px; border-color:#DCE7F5;">
+      <p id="team-warning" class="hidden mt-2 font-bold text-base" style="color: var(--error);">チーム名を選ぶか、入力してください</p>
+
+      <div class="mt-5">
+        <p class="text-sm font-bold mb-3 text-center" style="color:var(--sub-text);">候補から選ぶ</p>
+        <div id="team-chip-container" class="grid grid-cols-5 gap-2.5 max-w-xl mx-auto"></div>
+      </div>
+    </div>
+
+    <button id="start-btn" aria-label="授業をスタートする"
+      class="btn-press btn-shadow-yellow w-full mt-2 text-xl md:text-2xl font-extrabold rounded-[20px] py-5 flex items-center justify-center gap-2"
+      style="background: var(--meiko-yellow); color: var(--meiko-blue-dark); min-height:64px;">
+      スタート
+    </button>
+  </div>
+</section>
+
+<!-- ============ 画面2: 問題画面 ============ -->
+<section id="screen-quiz" class="screen min-h-screen w-full flex-col items-center p-4 md:p-6">
+  <div class="w-full max-w-5xl">
+    <!-- ヘッダー -->
+    <header class="bg-white rounded-[22px] card-shadow p-4 md:p-5 flex items-center justify-between gap-4 mb-4" style="border-bottom: 4px solid var(--meiko-blue);">
+      <div class="flex-1 min-w-0">
+        <p class="font-extrabold text-lg md:text-xl truncate" id="header-team-name" style="color: var(--meiko-blue-dark);">チーム名</p>
+        <div class="flex items-center gap-3 mt-1 flex-wrap">
+          <span class="font-bold text-base md:text-lg" style="color: var(--meiko-blue);" id="header-q-count">Q 1/5</span>
+          <span class="font-bold text-base md:text-lg" style="color: var(--success);" id="header-score">正解数 0</span>
+        </div>
+      </div>
+      <div class="flex-1 max-w-xs hidden sm:block">
+        <div class="w-full h-3 rounded-full bg-slate-200 overflow-hidden">
+          <div id="progress-bar" class="progress-fill h-full rounded-full" style="width:20%; background: linear-gradient(90deg, var(--meiko-blue), var(--meiko-yellow));"></div>
+        </div>
+      </div>
+      <button id="reset-btn-quiz" aria-label="教員用リセット"
+        class="btn-press flex-shrink-0 text-xs md:text-sm font-bold px-3 py-2.5 rounded-[14px] border text-slate-400 hover:bg-slate-50"
+        style="min-height:40px; border-color:#DCE7F5;">
+        リセット
+      </button>
+    </header>
+
+    <!-- 問題情報 -->
+    <div class="bg-white rounded-[22px] card-shadow p-5 md:p-6 mb-4">
+      <span id="era-label" class="era-badge inline-block px-3 py-1.5 rounded-full text-xs md:text-sm font-bold">古代〜中世</span>
+      <h2 id="question-title" class="text-xl md:text-2xl font-extrabold leading-snug mt-3" style="color: var(--meiko-blue-dark);">問題タイトル</h2>
+
+      <!-- 教科書ヒント -->
+      <div class="mt-4">
+        <button id="hint-toggle" aria-expanded="false" aria-controls="hint-body"
+          class="hint-toggle-btn btn-press w-full flex items-center justify-between px-5 py-4 rounded-[16px] font-bold text-base md:text-lg"
+          style="min-height:56px;">
+          <span class="flex items-center gap-2">
+            <span style="color: var(--meiko-blue);">■</span>
+            教科書ヒント
+          </span>
+          <span id="hint-arrow" class="transition-transform text-sm" style="color: var(--meiko-blue);">▼</span>
+        </button>
+        <div id="hint-body" class="hint-body">
+          <p id="hint-text" class="hint-body-inner mt-3 p-4 rounded-[14px] text-base md:text-lg font-medium leading-relaxed">ヒント文</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 並び替えエリア -->
+    <div id="card-list" class="flex flex-col gap-3 mb-6"></div>
+
+    <!-- 判定するボタン -->
+    <div class="judge-bar">
+      <button id="judge-btn" aria-label="答えを確認する"
+        class="btn-press btn-shadow-yellow w-full text-xl md:text-2xl font-extrabold rounded-[20px] py-5 flex items-center justify-center gap-2"
+        style="background: var(--meiko-yellow); color: var(--meiko-blue-dark); min-height:64px;">
+        答えを確認する
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 画面3: 判定結果オーバーレイ ============ -->
+<div id="result-overlay" class="hidden fixed inset-0 overlay-bg z-50 items-center justify-center p-4 overflow-y-auto">
+  <div class="overlay-card bg-white rounded-[26px] card-shadow max-w-2xl w-full my-8 p-6 md:p-8">
+    <div class="text-center mb-5">
+      <p id="result-title" class="text-2xl md:text-3xl font-extrabold" style="color: var(--meiko-blue-dark);">正解です</p>
+      <p id="result-comment" class="mt-2 text-base md:text-lg font-medium" style="color: var(--sub-text);"></p>
+    </div>
+
+    <!-- 正しい並び（大きく強調） -->
+    <div class="rounded-[18px] p-5" style="background: var(--base); border: 1.5px solid #DCE7F5;">
+      <p class="font-extrabold mb-3 text-base md:text-lg text-center" style="color: var(--meiko-blue-dark);">正しい並び</p>
+      <div id="correct-order-flow" class="flex flex-col items-stretch gap-1 text-base md:text-lg font-bold"></div>
+    </div>
+
+    <!-- あなたの並び（補助情報として折りたたみ表示） -->
+    <details class="mt-4 rounded-[14px] bg-slate-50 p-3">
+      <summary class="font-bold text-sm md:text-base cursor-pointer select-none" style="color: var(--sub-text);">あなたの並びを見る</summary>
+      <ol id="your-order-list" class="flex flex-col gap-1.5 mt-2 text-sm md:text-base font-medium"></ol>
+    </details>
+
+    <div class="mt-4 p-4 rounded-[16px]" style="background: var(--warm-base); border:1.5px solid #FDE68A;">
+      <p class="font-bold mb-1 text-base md:text-lg" style="color: var(--meiko-blue-dark);">今回のポイント</p>
+      <p id="result-point" class="text-base md:text-lg leading-relaxed"></p>
+    </div>
+
+    <button id="next-btn" class="btn-press btn-shadow-yellow w-full mt-6 text-xl md:text-2xl font-extrabold rounded-[20px] py-5"
+      style="background: var(--meiko-yellow); color: var(--meiko-blue-dark); min-height:64px;">
+      次の問題へ
+    </button>
+  </div>
+</div>
+
+<!-- ============ 画面4: 最終完了画面 ============ -->
+<section id="screen-final" class="screen min-h-screen w-full flex-col items-center justify-center p-4 md:p-6">
+  <div class="w-full max-w-2xl bg-white rounded-[28px] card-shadow p-6 md:p-10" style="border-top: 6px solid var(--meiko-blue); border-bottom: 6px solid var(--meiko-yellow);">
+    <div class="text-center">
+      <p class="text-2xl md:text-3xl font-extrabold" style="color: var(--text);">おつかれさまでした</p>
+      <p id="final-team-name" class="mt-2 text-lg md:text-xl font-bold" style="color: var(--meiko-blue);">チーム名 の結果</p>
+    </div>
+
+    <div class="mt-6 text-center rounded-[20px] p-6" style="background: var(--base); border: 1.5px solid #DCE7F5;">
+      <p id="final-score" class="text-3xl md:text-5xl font-extrabold" style="color: var(--meiko-blue-dark);">5問中4問正解</p>
+      <p id="final-rate" class="mt-1 text-xl md:text-2xl font-bold" style="color: var(--meiko-yellow-dark);">正答率80%</p>
+    </div>
+
+    <div class="mt-6">
+      <p class="font-bold text-lg mb-3">問題別結果</p>
+      <ul id="final-breakdown" class="flex flex-col gap-2"></ul>
+    </div>
+
+    <div class="mt-6">
+      <p class="font-bold text-lg mb-3">今日のまとめ</p>
+      <ul id="final-summary" class="flex flex-col gap-2 text-base md:text-lg font-medium"></ul>
+    </div>
+
+    <button id="show-lesson-btn" class="btn-press btn-shadow-yellow w-full mt-6 text-lg md:text-xl font-extrabold rounded-[20px] py-5"
+      style="background: var(--meiko-yellow); color: var(--meiko-blue-dark); min-height:64px;">
+      授業のまとめへ
+    </button>
+
+    <div id="lesson-message" class="hidden mt-5 p-5 rounded-[18px]" style="background: var(--warm-base); border:1.5px solid #FDE68A;">
+      <p class="text-base md:text-lg leading-relaxed font-medium"></p>
+    </div>
+  </div>
+</section>
+
+<script>
+(() => {
+  'use strict';
+
+  // ========================= 問題データ =========================
+  const QUESTIONS = [
+    {
+      title: '【古代〜中世】土地の所有と政治の主役の変化',
+      era: '古代〜中世',
+      hint: '土地の持ち主が国から個人へ移る流れに着目しよう。',
+      point: '土地が国のものだった時代から私有地中心へ変化したことで、有力者の土地を守る存在として武士が成長しました。',
+      summaryLine: '土地制度の変化が武士の時代を生んだ',
+      cards: [
+        { id: 'q1-1', name: '大化の改新', desc: '土地と人民はすべて天皇（国）のものとする「公地公民」が定められた。' },
+        { id: 'q1-2', name: '墾田永年私財法', desc: '人口増加で口分田が不足し、自分で開墾した土地の私有が永久に認められた。' },
+        { id: 'q1-3', name: '荘園の拡大', desc: '貴族や大寺社に土地が集まり、国の税収やコントロールが弱まった。' },
+        { id: 'q1-4', name: '武士の台頭', desc: '地方の豪族たちが自分の土地を守るために武装し、やがて政治の主役（幕府）へ成長した。' },
+      ],
+    },
+    {
+      title: '【江戸〜幕末】外圧と幕府滅亡へのピタゴラスイッチ',
+      era: '江戸〜幕末',
+      hint: '200年の平和を破った外圧がどう幕府を追い詰めたか追おう。',
+      point: '外国の圧力による開国が幕府への不信を生み、倒幕へつながりました。',
+      summaryLine: '外国からの圧力が幕府崩壊につながった',
+      cards: [
+        { id: 'q2-1', name: '鎖国体制', desc: '江戸幕府がキリスト教禁止と統制のため、日本人の海外渡航・帰国を禁じた。' },
+        { id: 'q2-2', name: 'ペリー来航', desc: 'アメリカの黒船が来航し、不平等条約（日米修好通商条約など）を結んで開国した。' },
+        { id: 'q2-3', name: '尊王攘夷運動', desc: '不平等条約への不満や物価高騰から、天皇を敬い外国を追い払おうとする動きが高まった。' },
+        { id: 'q2-4', name: '大政奉還', desc: '追い詰められた徳川慶喜が政権を朝廷に返上し、約260年続いた江戸幕府が幕を閉じた。' },
+      ],
+    },
+    {
+      title: '【明治】近代国家への国づくりと民主主義の芽生え',
+      era: '明治',
+      hint: '国を1つにし、お金を集め、国民の要求に応える順番に注目しよう。',
+      point: '中央集権化と安定した税収が、国民の政治参加要求につながりました。',
+      summaryLine: '近代国家づくりが民主主義の芽を育てた',
+      cards: [
+        { id: 'q3-1', name: '廃藩置県', desc: '藩を廃止して県を置き、中央集権国家（国が一括統治する仕組み）を固めた。' },
+        { id: 'q3-2', name: '地租改正', desc: '土地の所有者に地券を発行し、地価の3%を現金で納めさせて国の財政を安定させた。' },
+        { id: 'q3-3', name: '自由民権運動', desc: '板垣退助らが「国民の税で国を動かすなら、国会を開いて意見を聞け」と主張した。' },
+        { id: 'q3-4', name: '大日本帝国憲法', desc: 'アジア初の近代憲法が発布され、翌年には第1回帝国議会（国会）が開設された。' },
+      ],
+    },
+    {
+      title: '【昭和初期】世界恐慌から戦争への泥沼化',
+      era: '昭和初期',
+      hint: '経済の行き詰まりが軍部の台頭と孤立を招いた流れに注目しよう。',
+      point: '不況への対応として軍事拡大を進めた結果、国際社会との対立が深まりました。',
+      summaryLine: '世界恐慌が戦争への流れを加速させた',
+      cards: [
+        { id: 'q4-1', name: '世界恐慌', desc: 'アメリカ発の大不況が日本にも波及し、深刻な昭和恐慌となり農村や企業が困窮した。' },
+        { id: 'q4-2', name: '満州事変', desc: '経済的苦境を打開するため、関東軍（日本軍）が中国東北部を武力占領した。' },
+        { id: 'q4-3', name: '日中戦争', desc: '盧溝橋事件をきっかけに中国との全面戦争に突入し、長期化・泥沼化した。' },
+        { id: 'q4-4', name: '太平洋戦争', desc: '米英などから石油等の経済封鎖（ABCD包囲陣）を受け、追い詰められた日本が真珠湾を攻撃した。' },
+      ],
+    },
+    {
+      title: '【戦後〜現代】日本の復興と国際社会への復帰',
+      era: '戦後〜現代',
+      hint: '敗戦からの民主化、経済の立ち直り、独立と世界復帰の順に注目しよう。',
+      point: '民主化と経済復興を経て、日本は国際社会へ復帰しました。',
+      summaryLine: '民主化と経済成長が日本の国際復帰を支えた',
+      cards: [
+        { id: 'q5-1', name: '民主化改革', desc: 'GHQの指導下で、財閥解体・農地改革・日本国憲法の公布などが行われた。' },
+        { id: 'q5-2', name: '朝鮮戦争と特需', desc: '隣国での戦争を機に大量の物資発注（特需景気）が起き、日本経済が急速に復興した。' },
+        { id: 'q5-3', name: 'サンフランシスコ平和条約', desc: '連合国48カ国と条約を結び、日本の主権を回復（独立）した。' },
+        { id: 'q5-4', name: '国際連合への加盟', desc: '国際社会に平和国家として認められ、国連へ正式に加盟した。' },
+      ],
+    },
+  ];
+
+  const LESSON_MESSAGE = `歴史は暗記科目ではありません。
+教科書には「なぜ起きたのか」が書かれています。
+出来事を点ではなく線で見ると、北辰テストはぐっと解きやすくなります。
+今日扱った5つの流れを、ぜひ教科書でも追いかけてみてください。`;
+
+  // ========================= 状態管理 =========================
+  const state = {
+    teamName: '',
+    currentQuestionIndex: 0,
+    score: 0,
+    answers: [], // { correct: bool, userOrderIds: [...] }
+    currentOrder: [], // 現在表示中カードのid配列（並び順）
+    hasAnswered: false,
+  };
+
+  let sortableInstance = null;
+
+  // ========================= ユーティリティ =========================
+  function fisherYatesShuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function $(id) { return document.getElementById(id); }
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    $(id).classList.add('active');
+  }
+
+  function vibrateIfSupported(pattern) {
+    try {
+      if (navigator.vibrate) navigator.vibrate(pattern);
+    } catch (e) { /* 非対応端末では何もしない */ }
+  }
+
+  // ========================= 画面1: スタート画面 =========================
+  function initTeamChips() {
+    const container = $('team-chip-container');
+    const frag = document.createDocumentFragment();
+    for (let i = 1; i <= 10; i++) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = `チーム${i}`;
+      btn.setAttribute('aria-label', `チーム${i}を選択`);
+      btn.className = 'team-chip btn-press px-3 py-3 rounded-[14px] font-bold text-sm md:text-base';
+      btn.style.minHeight = '48px';
+      btn.addEventListener('click', () => {
+        $('team-input').value = `チーム${i}`;
+        document.querySelectorAll('.team-chip').forEach(c => c.classList.remove('selected'));
+        btn.classList.add('selected');
+        $('team-warning').classList.add('hidden');
+      });
+      frag.appendChild(btn);
+    }
+    container.appendChild(frag);
+  }
+
+  $('team-input').addEventListener('input', () => {
+    document.querySelectorAll('.team-chip').forEach(c => c.classList.remove('selected'));
+    $('team-warning').classList.add('hidden');
+  });
+
+  $('start-btn').addEventListener('click', () => {
+    const name = $('team-input').value.trim();
+    if (!name) {
+      $('team-warning').classList.remove('hidden');
+      $('team-input').focus();
+      $('team-input').classList.add('border-red-400');
+      setTimeout(() => $('team-input').classList.remove('border-red-400'), 800);
+      return;
+    }
+    state.teamName = name;
+    state.currentQuestionIndex = 0;
+    state.score = 0;
+    state.answers = [];
+    startQuestion(0);
+    showScreen('screen-quiz');
+  });
+
+  // ========================= 画面2: 問題画面 =========================
+  function startQuestion(index) {
+    const q = QUESTIONS[index];
+    state.hasAnswered = false;
+
+    // ヘッダー更新
+    $('header-team-name').textContent = state.teamName;
+    $('header-q-count').textContent = `Q ${index + 1}/5`;
+    $('header-score').textContent = `正解数 ${state.score}`;
+    $('progress-bar').style.width = `${((index) / 5) * 100 + 10}%`;
+
+    // 問題情報
+    $('era-label').textContent = q.era;
+    $('question-title').textContent = q.title;
+    $('hint-text').textContent = q.hint;
+
+    // ヒントは毎回閉じる
+    $('hint-body').classList.remove('open');
+    $('hint-toggle').setAttribute('aria-expanded', 'false');
+    $('hint-arrow').style.transform = 'rotate(0deg)';
+
+    // カードシャッフル
+    const shuffled = fisherYatesShuffle(q.cards);
+    state.currentOrder = shuffled.map(c => c.id);
+    renderCards(shuffled);
+  }
+
+  function renderCards(cardsInOrder) {
+    const list = $('card-list');
+    list.innerHTML = '';
+    cardsInOrder.forEach((card, i) => {
+      const el = document.createElement('div');
+      el.className = 'event-card card bg-white rounded-[22px] card-shadow p-4 md:p-5 flex items-center gap-4';
+      el.style.minHeight = '100px';
+      el.dataset.id = card.id;
+      el.innerHTML = `
+        <span class="order-badge flex-shrink-0 w-11 h-11 md:w-12 md:h-12 rounded-full flex items-center justify-center font-extrabold text-white text-lg md:text-xl">${i + 1}</span>
+        <div class="min-w-0 flex-1">
+          <p class="font-extrabold text-base md:text-lg" style="color: var(--meiko-blue-dark);">【${card.name}】</p>
+          <p class="text-sm md:text-base leading-relaxed mt-0.5" style="color: var(--sub-text);">${card.desc}</p>
+        </div>
+        <span class="flex-shrink-0 text-lg md:text-xl select-none" style="color:#CBD5E1;" aria-hidden="true">⠿</span>
+      `;
+      list.appendChild(el);
+    });
+
+    if (sortableInstance) sortableInstance.destroy();
+    sortableInstance = Sortable.create(list, {
+      animation: 250,
+      forceFallback: true,
+      fallbackOnBody: true,
+      fallbackTolerance: 3,
+      swapThreshold: 0.65,
+      delay: 80,
+      delayOnTouchOnly: true,
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      dragClass: 'sortable-drag',
+      onEnd: updateOrderFromDom,
+      onUpdate: updateOrderFromDom,
+    });
+    updateOrderFromDom();
+  }
+
+  function updateOrderFromDom() {
+    const list = $('card-list');
+    const ids = Array.from(list.children).map(el => el.dataset.id);
+    state.currentOrder = ids;
+    // 並び順バッジ更新（唯一の番号表示）
+    Array.from(list.children).forEach((el, i) => {
+      const badge = el.querySelector('.order-badge');
+      if (badge) badge.textContent = i + 1;
+    });
+  }
+
+  // 教科書ヒント アコーディオン
+  $('hint-toggle').addEventListener('click', () => {
+    const body = $('hint-body');
+    const isOpen = body.classList.toggle('open');
+    $('hint-toggle').setAttribute('aria-expanded', String(isOpen));
+    $('hint-arrow').style.transform = isOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+  });
+
+  // 判定するボタン
+  $('judge-btn').addEventListener('click', () => {
+    if (state.hasAnswered) return;
+    state.hasAnswered = true;
+    const q = QUESTIONS[state.currentQuestionIndex];
+    const correctIds = q.cards.map(c => c.id);
+    const isCorrect = correctIds.every((id, i) => id === state.currentOrder[i]);
+
+    state.answers.push({ correct: isCorrect, userOrderIds: state.currentOrder.slice() });
+    if (isCorrect) state.score++;
+
+    $('header-score').textContent = `正解数 ${state.score}`;
+    showResultOverlay(isCorrect, q);
+  });
+
+  // ========================= 画面3: 判定結果オーバーレイ =========================
+  function idToCard(q, id) {
+    return q.cards.find(c => c.id === id);
+  }
+
+  function showResultOverlay(isCorrect, q) {
+    const title = $('result-title');
+    const comment = $('result-comment');
+
+    if (isCorrect) {
+      title.textContent = '正解です';
+      title.style.color = 'var(--success)';
+      comment.textContent = '流れをしっかり読み取れました。';
+      fireConfetti();
+      vibrateIfSupported(60);
+    } else {
+      title.textContent = '正しい順番はこちら';
+      title.style.color = 'var(--meiko-blue-dark)';
+      comment.textContent = '正しい順番を確認して、次の問題へ進みましょう。';
+    }
+
+    // あなたの並び（補助情報）
+    const yourList = $('your-order-list');
+    yourList.innerHTML = '';
+    state.currentOrder.forEach((id, i) => {
+      const card = idToCard(q, id);
+      const li = document.createElement('li');
+      li.className = 'flex items-start gap-2 p-2 rounded-[10px] bg-white';
+      li.innerHTML = `<span class="font-extrabold" style="color:var(--meiko-blue);">${i + 1}.</span><span>【${card.name}】</span>`;
+      yourList.appendChild(li);
+    });
+
+    // 正しい並び（縦フロー・大きく強調）
+    const flow = $('correct-order-flow');
+    flow.innerHTML = '';
+    const circledNums = ['①', '②', '③', '④'];
+    q.cards.forEach((card, i) => {
+      const item = document.createElement('div');
+      item.className = 'py-2.5 px-3 rounded-[12px] bg-white text-center';
+      item.style.border = '1.5px solid #DCE7F5';
+      item.innerHTML = `<span style="color: var(--meiko-yellow-dark);">${circledNums[i]}</span> <span style="color: var(--meiko-blue-dark);">${card.name}</span>`;
+      flow.appendChild(item);
+      if (i < q.cards.length - 1) {
+        const arrow = document.createElement('div');
+        arrow.className = 'flow-connector text-center font-extrabold text-xl';
+        arrow.style.color = 'var(--meiko-blue)';
+        arrow.textContent = '↓';
+        flow.appendChild(arrow);
+      }
+    });
+
+    // ポイント
+    $('result-point').textContent = q.point;
+
+    // 次へボタンの文言
+    $('next-btn').textContent = (state.currentQuestionIndex === QUESTIONS.length - 1) ? '結果を見る' : '次の問題へ';
+
+    $('result-overlay').classList.remove('hidden');
+    $('result-overlay').classList.add('flex');
+  }
+
+  function fireConfetti() {
+    if (typeof confetti !== 'function') return;
+    confetti({
+      particleCount: 70,
+      spread: 60,
+      startVelocity: 32,
+      origin: { y: 0.6 },
+      colors: ['#005BAC', '#FACC15', '#EAB308', '#FFFFFF'],
+      scalar: 0.9,
+    });
+  }
+
+  $('next-btn').addEventListener('click', () => {
+    $('result-overlay').classList.add('hidden');
+    $('result-overlay').classList.remove('flex');
+
+    if (state.currentQuestionIndex === QUESTIONS.length - 1) {
+      showFinalScreen();
+    } else {
+      state.currentQuestionIndex++;
+      startQuestion(state.currentQuestionIndex);
+    }
+  });
+
+  // ========================= 画面4: 最終完了画面 =========================
+  function showFinalScreen() {
+    $('progress-bar').style.width = '100%';
+    $('final-team-name').textContent = `${state.teamName} の結果`;
+    $('final-score').textContent = `5問中${state.score}問正解`;
+    const rate = Math.round((state.score / QUESTIONS.length) * 100);
+    $('final-rate').textContent = `正答率${rate}%`;
+
+    const breakdown = $('final-breakdown');
+    breakdown.innerHTML = '';
+    QUESTIONS.forEach((q, i) => {
+      const answer = state.answers[i];
+      const ok = answer && answer.correct;
+      const li = document.createElement('li');
+      li.className = 'flex items-center justify-between px-4 py-3 rounded-[14px] bg-slate-50 font-bold text-base md:text-lg';
+      li.innerHTML = `
+        <span>${q.era}</span>
+        <span style="color: ${ok ? 'var(--success)' : 'var(--error)'};" aria-label="${ok ? '正解' : '不正解'}">
+          ${ok ? '○ 正解' : '× 不正解'}
+        </span>
+      `;
+      breakdown.appendChild(li);
+    });
+
+    const summary = $('final-summary');
+    summary.innerHTML = '';
+    QUESTIONS.forEach(q => {
+      const li = document.createElement('li');
+      li.className = 'flex items-start gap-2 px-3 py-2';
+      li.innerHTML = `<span style="color: var(--meiko-blue);">・</span><span>${q.summaryLine}</span>`;
+      summary.appendChild(li);
+    });
+
+    $('lesson-message').classList.add('hidden');
+    showScreen('screen-final');
+  }
+
+  $('show-lesson-btn').addEventListener('click', () => {
+    const box = $('lesson-message');
+    box.querySelector('p').textContent = LESSON_MESSAGE;
+    box.classList.remove('hidden');
+  });
+
+  // ========================= リセット機能 =========================
+  function resetAll() {
+    state.teamName = '';
+    state.currentQuestionIndex = 0;
+    state.score = 0;
+    state.answers = [];
+    state.currentOrder = [];
+    state.hasAnswered = false;
+
+    $('team-input').value = '';
+    document.querySelectorAll('.team-chip').forEach(c => c.classList.remove('selected'));
+    $('team-warning').classList.add('hidden');
+    $('lesson-message').classList.add('hidden');
+    $('result-overlay').classList.add('hidden');
+    $('result-overlay').classList.remove('flex');
+
+    showScreen('screen-start');
+  }
+
+  function confirmReset() {
+    if (window.confirm('本当に最初からやり直しますか？')) {
+      resetAll();
+    }
+  }
+
+  $('reset-btn-quiz').addEventListener('click', confirmReset);
+
+  // ========================= 初期化 =========================
+  initTeamChips();
+})();
+</script>
+</body>
+</html>
